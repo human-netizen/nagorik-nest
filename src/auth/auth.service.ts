@@ -39,7 +39,7 @@ constructor(
       email: user.email,
     };
   }
-  async login(loginDto: LoginDto) {
+async login(loginDto: LoginDto) {
   const user = await this.prisma.user.findUnique({
     where: {
       email: loginDto.email,
@@ -59,8 +59,13 @@ constructor(
     throw new UnauthorizedException('Invalid email or password');
   }
 
+  const accessToken = this.jwtService.sign({
+    sub: user.id,
+    email: user.email,
+  });
+
   return {
-    message: 'Login successful',
+    accessToken,
   };
 }
 }
