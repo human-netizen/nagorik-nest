@@ -12,33 +12,45 @@ constructor(
   private readonly jwtService: JwtService,
 ) {}
 
-  async register(registerDto: RegisterDto) {
-    const existingUser = await this.prisma.user.findUnique({
-      where: {
-        email: registerDto.email,
-      },
-    });
+async register(registerDto: RegisterDto) {
+  const existingUser = await this.prisma.user.findUnique({
+    where: {
+      email: registerDto.email,
+    },
+  });
 
-    if (existingUser) {
-      throw new ConflictException('Email already exists');
-    }
-
-    const passwordHash = await bcrypt.hash(registerDto.password, 10);
-
-    const user = await this.prisma.user.create({
-      data: {
-        name: registerDto.name,
-        email: registerDto.email,
-        passwordHash,
-      },
-    });
-
-    return {
-      id: user.id,
-      name: user.name,
-      email: user.email,
-    };
+  if (existingUser) {
+    throw new ConflictException('Email already exists');
   }
+
+  const userRole = await this.prisma.role.findUnique({
+    where: {
+      name: 'USER',
+    },
+  });
+
+  if (!userRole) {
+    throw new Error('USER role not found. Run the Prisma seed.');
+  }
+
+  const passwordHash = await bcrypt.hash(registerDto.password, 10);
+
+  const user = await this.prisma.user.create({
+    data: {
+      name: registerDto.name,
+      email: registerDto.email,
+      passwordHash,
+      roleId: userRole.id,
+    },
+  });
+
+  return {
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    roleId: user.roleId,
+  };
+}
 async login(loginDto: LoginDto) {
   const user = await this.prisma.user.findUnique({
     where: {
@@ -59,11 +71,10 @@ async login(loginDto: LoginDto) {
     throw new UnauthorizedException('Invalid email or password');
   }
 
-  const accessToken = this.jwtService.sign({
-    sub: user.id,
-    email: user.email,
-  });
-
+const accessToken = this.jwtService.sign({
+  sub: user.id,
+  email: user.email,
+});
   return {
     accessToken,
   };
