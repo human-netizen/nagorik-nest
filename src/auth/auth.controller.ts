@@ -22,6 +22,6 @@ export class AuthController {
 	@UseGuards(JwtAuthGuard)
 	@Get('me')
 	getMe(@Req() request: AuthenticatedRequest) {
-		return request.user;
+		return this.authService.getMe(request.user.userId);
 	}
 }

@@ -20,10 +20,12 @@ async function main() {
     'USER_CREATE',
     'USER_UPDATE',
     'USER_DELETE',
+    'ROLE_READ',
     'TASK_CREATE',
     'TASK_READ',
     'TASK_UPDATE',
     'TASK_DELETE',
+    'TASK_ASSIGN',
     'TASK_MANAGE_ALL',
     'USER_ASSIGN_ROLE'
   ];

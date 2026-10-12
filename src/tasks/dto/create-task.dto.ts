@@ -1,11 +1,14 @@
+
 import {
   IsEnum,
+  IsInt,
   IsNotEmpty,
   IsOptional,
   IsString,
+  Min,
 } from 'class-validator';
 
-import { TaskStatus } from '../../generated/prisma/enums.js';
+import { TaskStatus } from '../../generated/prisma/client.js';
 
 export class CreateTaskDto {
   @IsString()
@@ -19,4 +22,9 @@ export class CreateTaskDto {
   @IsOptional()
   @IsEnum(TaskStatus)
   status?: TaskStatus;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  userId?: number;
 }

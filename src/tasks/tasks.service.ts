@@ -1,5 +1,6 @@
 
 import {
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -14,8 +15,9 @@ export class TasksService {
     private readonly prisma: PrismaService,
   ) {}
 
-  private async hasGlobalTaskAccess(
+  private async hasPermission(
     userId: number,
+    permissionName: string,
   ): Promise<boolean> {
     const user = await this.prisma.user.findUnique({
       where: {
@@ -40,7 +42,7 @@ export class TasksService {
 
     return user.role.permissions.some(
       (rolePermission) =>
-        rolePermission.permission.name === 'TASK_MANAGE_ALL',
+        rolePermission.permission.name === permissionName,
     );
   }
 
@@ -48,19 +50,50 @@ export class TasksService {
     userId: number,
     createTaskDto: CreateTaskDto,
   ) {
+    let taskOwnerId = userId;
+
+    if (createTaskDto.userId !== undefined) {
+      const canAssignTasks = await this.hasPermission(
+        userId,
+        'TASK_ASSIGN',
+      );
+
+      if (!canAssignTasks) {
+        throw new ForbiddenException(
+          'You do not have permission to assign tasks',
+        );
+      }
+
+      const targetUser = await this.prisma.user.findUnique({
+        where: {
+          id: createTaskDto.userId,
+        },
+      });
+
+      if (!targetUser) {
+        throw new NotFoundException(
+          'Target user not found',
+        );
+      }
+
+      taskOwnerId = targetUser.id;
+    }
+
     return this.prisma.task.create({
       data: {
         title: createTaskDto.title,
         description: createTaskDto.description,
         status: createTaskDto.status,
-        userId,
+        userId: taskOwnerId,
       },
     });
   }
 
   async findAll(userId: number) {
-    const canManageAllTasks =
-      await this.hasGlobalTaskAccess(userId);
+    const canManageAllTasks = await this.hasPermission(
+      userId,
+      'TASK_MANAGE_ALL',
+    );
 
     return this.prisma.task.findMany({
       where: canManageAllTasks
@@ -88,7 +121,10 @@ export class TasksService {
 
     if (task.userId !== userId) {
       const canManageAllTasks =
-        await this.hasGlobalTaskAccess(userId);
+        await this.hasPermission(
+          userId,
+          'TASK_MANAGE_ALL',
+        );
 
       if (!canManageAllTasks) {
         throw new NotFoundException('Task not found');

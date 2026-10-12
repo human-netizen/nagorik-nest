@@ -51,6 +51,50 @@ async register(registerDto: RegisterDto) {
     roleId: user.roleId,
   };
 }
+
+async getMe(userId: number) {
+  const user = await this.prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      role: {
+        select: {
+          id: true,
+          name: true,
+          permissions: {
+            select: {
+              permission: {
+                select: {
+                  name: true,
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  });
+
+  if (!user) {
+    throw new UnauthorizedException('User not found');
+  }
+
+  return {
+    userId: user.id,
+    name: user.name,
+    email: user.email,
+    role: {
+      id: user.role.id,
+      name: user.role.name,
+    },
+    permissions: user.role.permissions.map(
+      ({ permission }) => permission.name,
+    ),
+  };
+}
+
 async login(loginDto: LoginDto) {
   const user = await this.prisma.user.findUnique({
     where: {
